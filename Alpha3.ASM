@@ -1,10 +1,9 @@
 ;-------------------------------------------------------------------------
 ; Attack On Alpha Centauri - Disassembly
 ;-------------------------------------------------------------------------
-; ALPHA1 loads at 1900 and then the code from 1DC0 is relocated down to
-; 0900.  The relocation code for the main game is stored at 0A00 which  
-; loads the ALPHA3 at 2500 and then relocates it down to 0E00. 
-; THe game is then executed at 1100
+; ALPHA1 loads at 1900 and code from 1DC0 is relocated to 0900
+; Relocation code is stored at 0A00 which loads the ALPHA3 at 2500 
+; and then relocated down to 0E00. Game execution is then at 1100
 ;
 ; File used is from http://bbcmicro.co.uk/explore.php?id=74
 ;-------------------------------------------------------------------------
@@ -36,15 +35,15 @@ L007A   = $007A
 L007B   = $007B
 L007C   = $007C
 L007D   = $007D
-L007E   = $007E
+bullet_fired   = $007E
 L007F   = $007F
 L0080   = $0080
 L008A   = $008A
 L008C   = $008C
 L008E   = $008E
 L008F   = $008F
-sound_flag  = $0C41
-freeze_flag = $0C42
+sound_flag          = $0C41
+freeze_flag         = $0C42
 L0C43   = $0C43
 L0C45   = $0C45
 L0C46   = $0C46
@@ -57,9 +56,9 @@ L0C50   = $0C50
 L0C51   = $0C51
 L0C52   = $0C52
 L0C53   = $0C53
-L0C54   = $0C54
-L0C55   = $0C55
-L0C56   = $0C56
+player_address_low  = $0C54
+player_address_high = $0C55
+player_x_pos        = $0C56
 L0C58   = $0C58
 L0C59   = $0C59
 L0C5A   = $0C5A
@@ -321,7 +320,7 @@ NNWRCH  = $FFCB
     LDA freeze_flag   ; Freeze flag
     BEQ L10F8
 
-    JSR L112E
+    JSR UpdatePlayer
 
     JSR L128E
 
@@ -351,47 +350,54 @@ NNWRCH  = $FFCB
 .L112B
     JMP L19ED
 
-.L112E
+;-------------------------------------------------------------------------
+; UpdatePlayer
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.UpdatePlayer
     LDA L0D6B
-    BNE L1166
+    BNE UpdatePlayerExit
 
     LDX #keyCodeA 
     JSR isKeyPressed
 
     CPX #$FF
-    BNE L113F
+    BNE CheckPlayerRight
 
-    JSR L11ED
+    JSR PlayerLeft
 
-.L113F
+.CheckPlayerRight
     LDX #keyCodeS
     JSR isKeyPressed
 
     CPX #$FF
-    BNE L114B
+    BNE CheckPlayerFire
 
-    JSR L1210
+    JSR PlayerRight
 
-.L114B
+.CheckPlayerFire
     LDX #keyCodeRETURN
     JSR isKeyPressed
 
     CPX #$FF
-    BNE L1162
+    BNE BulletAlreadyFired
 
-    LDA L007E
-    BNE L1166
+    LDA bullet_fired
+    BNE UpdatePlayerExit
 
-    JSR L1242
+    JSR PlayerFire
 
     LDA #$01
-    STA L007E
-    JMP L1166
+    STA bullet_fired
+    JMP UpdatePlayerExit
 
-.L1162
+.BulletAlreadyFired
     LDA #$00
-    STA L007E
-.L1166
+    STA bullet_fired
+
+.UpdatePlayerExit
     RTS
 
 ;-------------------------------------------------------------------------
@@ -407,9 +413,14 @@ NNWRCH  = $FFCB
     LDA #$81
     JSR OSBYTE
     RTS
-;-------------------------------------------------------------------------
 
-.L116F
+;-------------------------------------------------------------------------
+; PlotSpriteTile
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.PlotSprite
     JSR L11AA
 
     LDA #$88
@@ -454,9 +465,9 @@ NNWRCH  = $FFCB
     RTS
 
 .L11AA
-    LDA L0C54
+    LDA player_address_low
     STA L0070
-    LDA L0C55
+    LDA player_address_high
     STA L0071
     RTS
 
@@ -503,43 +514,53 @@ NNWRCH  = $FFCB
     RTS
 
 ;-------------------------------------------------------------------------
-
-.L11ED
-    LDA L0C56
-    CMP L2F02
+; PlayerLeft
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.PlayerLeft
+    LDA player_x_pos
+    CMP screen_min_x
     BEQ L120F
 
     JSR L11D0
 
-    DEC L0C56
+    DEC player_x_pos
     SEC
-    LDA L0C54
+    LDA player_address_low
     SBC #$08
-    STA L0C54
-    LDA L0C55
+    STA player_address_low
+    LDA player_address_high
     SBC #$00
-    STA L0C55
-    JSR L116F
+    STA player_address_high
+    JSR PlotSprite
 
 .L120F
     RTS
 
-.L1210
-    LDA L0C56
-    CMP L2F03
+;-------------------------------------------------------------------------
+; PlayerRight
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.PlayerRight
+    LDA player_x_pos
+    CMP screen_max_x
     BEQ L1232
 
     JSR L11D0
 
-    INC L0C56
+    INC player_x_pos
     CLC
-    LDA L0C54
+    LDA player_address_low
     ADC #$08
-    STA L0C54
-    LDA L0C55
+    STA player_address_low
+    LDA player_address_high
     ADC #$00
-    STA L0C55
-    JSR L116F
+    STA player_address_high
+    JSR PlotSprite
 
 .L1232
     RTS
@@ -554,27 +575,31 @@ NNWRCH  = $FFCB
     DEX
     BNE L1235
 
-    JSR L116F
+    JSR PlotSprite
 
     RTS
 
 ;-------------------------------------------------------------------------
-
-.L1242
+; PlayerFire
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.PlayerFire
     LDA L0C58
     BNE L1271
 
     JSR L1C99
 
     SEC
-    LDA L0C54
+    LDA player_address_low
     SBC #$70
     STA L0C59
-    LDA L0C55
+    LDA player_address_high
     SBC #$02
     STA L0C5A
     CLC
-    LDA L0C56
+    LDA player_x_pos
     ADC #$02
     STA L0C5B
     LDA #$1C
@@ -600,7 +625,6 @@ NNWRCH  = $FFCB
     STA L0079
     STA L007A
     JSR L1086
-
     RTS
 
 ;-------------------------------------------------------------------------
@@ -1256,11 +1280,11 @@ NNWRCH  = $FFCB
 
 .L16A4
     LDA L2259,X
-    CMP L0C56
+    CMP player_x_pos
     BCC L16BA
 
     CLC
-    LDA L0C56
+    LDA player_x_pos
     ADC #$04
     CMP L2259,X
     BCC L16BA
@@ -2862,10 +2886,10 @@ NNWRCH  = $FFCB
     EQUB    $00,$00,$00,$00,$00,$00,$00,$00
     EQUB    $FF,$0A
 
-.L2F02
+.screen_min_x
     EQUB    $06
 
-.L2F03
+.screen_max_x
     EQUB    $47
 
 .L2F04
