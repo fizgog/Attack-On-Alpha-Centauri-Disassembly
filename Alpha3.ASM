@@ -35,7 +35,7 @@ L007A   = $007A
 L007B   = $007B
 L007C   = $007C
 L007D   = $007D
-bullet_fired        = $007E
+bullet_firing        = $007E     ; Set to 1 when fired otherwise 0
 L007F   = $007F
 L0080   = $0080
 L008A   = $008A
@@ -59,7 +59,7 @@ L0C53   = $0C53
 player_address_low  = $0C54
 player_address_high = $0C55
 player_x_pos        = $0C56
-L0C58   = $0C58
+bullet_fired   = $0C58
 L0C59   = $0C59
 L0C5A   = $0C5A
 L0C5B   = $0C5B
@@ -343,16 +343,14 @@ ORG $2500
 ;-------------------------------------------------------------------------
 
 .L10F8
-    JSR L16CD
+    JSR UpdateTimer
+    JSR CheckSpecialKeys        ; Check for sound and freeze key presses
 
-    JSR L1B37
-
-    LDA freeze_flag   ; Freeze flag
-    BEQ L10F8
+    LDA freeze_flag             ; Freeze flag
+    BEQ L10F8                   ; If Fozen branch back to top
 
     JSR UpdatePlayer
-
-    JSR L128E
+    JSR UpdateBullet
 
     JSR L143D
 
@@ -364,7 +362,7 @@ ORG $2500
 
     JSR L164D
 
-    JSR L16BB
+    JSR TimerWait
 
     LDA L0D5B
     BNE L1128
@@ -387,7 +385,7 @@ ORG $2500
 ; On exit   : 
 ;-------------------------------------------------------------------------
 .UpdatePlayer
-    LDA L0D6B
+    LDA L0D6B                           ; This does nothing as it never changes from $00
     BNE UpdatePlayerExit
 
     LDX #keyCodeA 
@@ -414,18 +412,18 @@ ORG $2500
     CPX #$FF
     BNE FireNotPressed
 
-    LDA bullet_fired
+    LDA bullet_firing
     BNE UpdatePlayerExit
 
     JSR PlayerFire
 
     LDA #$01
-    STA bullet_fired
+    STA bullet_firing
     JMP UpdatePlayerExit
 
 .FireNotPressed
     LDA #$00
-    STA bullet_fired
+    STA bullet_firing
 
 .UpdatePlayerExit
     RTS
@@ -628,7 +626,7 @@ ORG $2500
 ; On exit   : 
 ;-------------------------------------------------------------------------
 .PlayerFire
-    LDA L0C58
+    LDA bullet_fired
     BNE PlayerFireExit
 
     JSR L1C99
@@ -647,7 +645,7 @@ ORG $2500
     LDA #$1C
     STA L0C5C
     LDA #$01
-    STA L0C58
+    STA bullet_fired
     JSR L1272
 
 .PlayerFireExit
@@ -670,9 +668,13 @@ ORG $2500
     RTS
 
 ;-------------------------------------------------------------------------
-
-.L128E
-    LDA L0C58
+; UpdateBullet
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.UpdateBullet
+    LDA bullet_fired
     BEQ L12BD
 
     JSR L1272
@@ -690,7 +692,7 @@ ORG $2500
     BNE L12B7
 
     LDA #$00
-    STA L0C58
+    STA bullet_fired
     RTS
 
 .L12B7
@@ -752,7 +754,7 @@ ORG $2500
     LDX L008F
     LDA #$00
     STA L0C70,X
-    STA L0C58
+    STA bullet_fired
     DEC L0C52
     LDA L22B4,X
     BEQ L1325
@@ -1338,11 +1340,16 @@ ORG $2500
 .L16BA
     RTS
 
+
+;-------------------------------------------------------------------------
+; TimerWait
 ;-------------------------------------------------------------------------
 ; Read System Clock
 ;-------------------------------------------------------------------------
-
-.L16BB
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.TimerWait
     LDA #$01
     LDY #$0C
     LDX #$46
@@ -1350,14 +1357,18 @@ ORG $2500
 
     LDA L0C46
     CMP L2F11
-    BCC L16BB
+    BCC TimerWait
     RTS
 
 ;-------------------------------------------------------------------------
+; UpdateTimer
+;-------------------------------------------------------------------------
 ; Write System Clock
 ;-------------------------------------------------------------------------
-
-.L16CD
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.UpdateTimer
     LDA #$02
     LDY #$25
     LDX #$18
@@ -1546,18 +1557,18 @@ ORG $2500
     STA L0D51
     LDA L2F13
     STA L0D52
-    LDA L0C58
+    LDA bullet_fired
     BEQ L17E4
 
     JSR L1272
 
     LDA #$00
-    STA L0C58
+    STA bullet_fired
 .L17E4
     JSR L1817
 
 .L17E7
-    JSR L16CD
+    JSR UpdateTimer
 
     JSR L1704
 
@@ -1565,7 +1576,7 @@ ORG $2500
 
     JSR L143D
 
-    JSR L16BB
+    JSR TimerWait
 
     DEC L0D52
     BNE L17E7
@@ -1883,7 +1894,7 @@ ORG $2500
     STA L0D5C
     STA L0C51
     LDA #$00
-    STA L0C58
+    STA bullet_fired
     STA L0C4E
     STA L0C4F
     STA L0C5D
@@ -1923,11 +1934,11 @@ ORG $2500
     LDA #$32
     STA L008F
 .L19F4
-    JSR L16CD
+    JSR UpdateTimer
 
     JSR L143D
 
-    JSR L16BB
+    JSR TimerWait
 
     DEC L008F
     BNE L19F4
@@ -1975,9 +1986,9 @@ ORG $2500
     LDA L2F14
     STA L0D5D
 .L1A48
-    JSR L16CD
+    JSR UpdateTimer
 
-    JSR L16BB
+    JSR TimerWait
 
     DEC L0D5D
     BNE L1A48
@@ -2091,7 +2102,7 @@ ORG $2500
     JSR L1AF1
 
 .L1B15
-    JSR L16CD
+    JSR UpdateTimer
 
     DEC L0C43
     BNE L1B26
@@ -2103,7 +2114,7 @@ ORG $2500
 .L1B26
     JSR L1727
 
-    JSR L16BB
+    JSR TimerWait
 
     LDA L0C5D
     BNE L1B15
@@ -2113,7 +2124,13 @@ ORG $2500
 
     RTS
 
-.L1B37
+;-------------------------------------------------------------------------
+; CheckSpecialKeys
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.CheckSpecialKeys
     LDX #keyCodeCAPSLOCK
     JSR isKeyPressed
 
