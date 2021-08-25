@@ -59,7 +59,7 @@ L0C53   = $0C53
 player_address_low  = $0C54
 player_address_high = $0C55
 player_x_pos        = $0C56
-bullet_fired   = $0C58
+bullet_fired        = $0C58
 L0C59   = $0C59
 L0C5A   = $0C5A
 L0C5B   = $0C5B
@@ -78,7 +78,7 @@ L0D4F   = $0D4F
 L0D50   = $0D50
 L0D51   = $0D51
 L0D52   = $0D52
-L0D53   = $0D53
+lives_left          = $0D53
 L0D54   = $0D54
 L0D55   = $0D55
 L0D56   = $0D56
@@ -194,7 +194,7 @@ ORG $2500
     STA L0D6B
     JSR L18C9
 
-    JSR L18BE
+    JSR UpdateScore
 
     LDA #$01
     STA sound_flag      ; Sound flag
@@ -213,7 +213,7 @@ ORG $2500
     BPL L1038
 
     LDA #$03
-    STA L0D53
+    STA lives_left
     LDA #$05
     STA L0D66
     LDA #$20
@@ -606,8 +606,12 @@ ORG $2500
     RTS
 
 ;-------------------------------------------------------------------------
-
-.L1233
+; PlotLivesLeft
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.PlotLivesLeft
     LDX #$04
 .L1235
     LDA L2F05,X
@@ -616,7 +620,6 @@ ORG $2500
     BNE L1235
 
     JSR PlotSprite
-
     RTS
 
 ;-------------------------------------------------------------------------
@@ -675,7 +678,7 @@ ORG $2500
 ;-------------------------------------------------------------------------
 .UpdateBullet
     LDA bullet_fired
-    BEQ L12BD
+    BEQ UpdateBulletExit
 
     JSR L1272
 
@@ -700,7 +703,7 @@ ORG $2500
 
     JSR L12BE
 
-.L12BD
+.UpdateBulletExit
     RTS
 
 ;-------------------------------------------------------------------------
@@ -1583,7 +1586,7 @@ ORG $2500
 
     LDA #$00
     STA L0C4F
-    LDA L0D53
+    LDA lives_left
     BNE L180D
 
     LDA #$01
@@ -1591,8 +1594,8 @@ ORG $2500
     JMP L1816
 
 .L180D
-    DEC L0D53
-    JSR L1233
+    DEC lives_left
+    JSR PlotLivesLeft
 
     JSR L18AD
 
@@ -1629,14 +1632,14 @@ ORG $2500
     DEY
     BPL L183C
 
-    LDA L0D53
+    LDA lives_left
     BEQ L187B
 
     LDA #$10
     STA L0D54
     LDA #$31
     STA L0D55
-    LDA L0D53
+    LDA lives_left
     STA L008F
 .L1859
     LDA L0D54
@@ -1706,16 +1709,21 @@ ORG $2500
     RTS
 
 ;-------------------------------------------------------------------------
-
-.L18BE
+; UpdateScore
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.UpdateScore
     LDX #$04
     LDA #$30
 .L18C2
     STA L1C46,X
     DEX
     BPL L18C2
-
     RTS
+
+;-------------------------------------------------------------------------
 
 .L18C9
     LDX #$04
@@ -1758,16 +1766,20 @@ ORG $2500
 
     RTS
 
-.L1901
+;-------------------------------------------------------------------------
+; CheckHighScore
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.CheckHighScore
     LDX #$00
 .L1903
     LDA L1C46,X
     CMP L1C55,X
     BCC L1915
-
     BEQ L1910
-
-    JMP L1919
+    JMP UpdateHighScore
 
 .L1910
     INX
@@ -1776,10 +1788,15 @@ ORG $2500
 
 .L1915
     JSR L18AD
-
     RTS
 
-.L1919
+;-------------------------------------------------------------------------
+; UpdateHighScore
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.UpdateHighScore
     LDX #$04
 .L191B
     LDA L1C46,X
@@ -1885,8 +1902,8 @@ ORG $2500
     JSR L195F
 
     LDA #$03
-    STA L0D53
-    JSR L18BE
+    STA lives_left
+    JSR UpdateScore
 
     JSR L18D4
 
@@ -1912,9 +1929,9 @@ ORG $2500
 
     JSR L1A42
 
-    JSR L1233
+    JSR PlotLivesLeft
 
-    DEC L0D53
+    DEC lives_left
     JSR L1838
 
     JMP L10F8
@@ -1922,7 +1939,7 @@ ORG $2500
 .L19E1
     JSR L1927
 
-    JSR L1901
+    JSR CheckHighScore
 
     JSR L18D4
 
@@ -1947,7 +1964,7 @@ ORG $2500
 
     JSR EraseSprite
 
-    INC L0D53
+    INC lives_left
     JSR L18D4
 
     LDA L0D5C
@@ -1962,9 +1979,9 @@ ORG $2500
 
     JSR L1A42
 
-    JSR L1233
+    JSR PlotLivesLeft
 
-    DEC L0D53
+    DEC lives_left
     JSR L18D4
 
     LDX #$1F
