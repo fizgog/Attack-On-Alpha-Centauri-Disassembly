@@ -54,7 +54,7 @@ L0C4E   = $0C4E
 L0C4F   = $0C4F
 L0C50   = $0C50
 L0C51   = $0C51
-L0C52   = $0C52
+enemies_left        = $0C52
 L0C53   = $0C53
 player_address_low  = $0C54
 player_address_high = $0C55
@@ -86,7 +86,7 @@ L0D57   = $0D57
 L0D58   = $0D58
 L0D59   = $0D59
 L0D5A   = $0D5A
-L0D5B   = $0D5B
+game_over_flag      = $0D5B
 L0D5C   = $0D5C
 L0D5D   = $0D5D
 L0D5E   = $0D5E
@@ -263,8 +263,12 @@ ORG $2500
     RTS
 
 ;-------------------------------------------------------------------------
-
-.L1086
+; EraseEnemy
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.EraseEnemy
     LDA L007B
     STA screen_address_low
     LDA L007C
@@ -279,7 +283,7 @@ ORG $2500
     BNE L1092
     JSR L10C3
     DEC L007A
-    BNE L1086
+    BNE EraseEnemy
     RTS
 
 ;-------------------------------------------------------------------------
@@ -319,8 +323,12 @@ ORG $2500
     RTS
 
 ;-------------------------------------------------------------------------
-
-.L10D1
+; EraseAllEnemies
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.EraseAllEnemies
     LDA L0C9C,X
     STA L007B
     LDA L0CC8,X
@@ -336,47 +344,47 @@ ORG $2500
     STA L0079
     LDA L2508,Y
     STA L007A
-    JSR L1086
+    JSR EraseEnemy
 
     RTS
 
 ;-------------------------------------------------------------------------
-
-.L10F8
+; MainGameLoop
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.MainGameLoop
     JSR UpdateTimer
     JSR CheckSpecialKeys        ; Check for sound and freeze key presses
 
     LDA freeze_flag             ; Freeze flag
-    BEQ L10F8                   ; If Fozen branch back to top
+    BEQ MainGameLoop            ; If Frozen branch back to top
 
     JSR UpdatePlayer
     JSR UpdateBullet
 
     JSR L143D
-
     JSR L1486
-
     JSR L14CE
-
     JSR L15A3
-
     JSR L164D
 
     JSR TimerWait
 
-    LDA L0D5B
+    LDA game_over_flag          ; 1 = game over
     BNE L1128
 
-    LDA L0C52
+    LDA enemies_left            ; 0 = next wave (32 enemies in total)
     BEQ L112B
 
-    JMP L10F8
+    JMP MainGameLoop
 
 .L1128
-    JMP L19E1
+    JMP GameOver
 
 .L112B
-    JMP L19ED
+    JMP NextWave
 
 ;-------------------------------------------------------------------------
 ; UpdatePlayer
@@ -667,7 +675,7 @@ ORG $2500
     LDA #$01
     STA L0079
     STA L007A
-    JSR L1086
+    JSR EraseEnemy
     RTS
 
 ;-------------------------------------------------------------------------
@@ -752,13 +760,13 @@ ORG $2500
     LDA L0C70,X
     STA L008C
     STX L008F
-    JSR L10D1
+    JSR EraseAllEnemies
 
     LDX L008F
     LDA #$00
     STA L0C70,X
     STA bullet_fired
-    DEC L0C52
+    DEC enemies_left
     LDA L22B4,X
     BEQ L1325
 
@@ -919,7 +927,7 @@ ORG $2500
     CMP #$76
     BCS L1404
 
-    JSR L1086
+    JSR EraseEnemy
 
 .L1404
     RTS
@@ -1004,14 +1012,14 @@ ORG $2500
     RTS
 
 .L1486
-    LDA L0C52
+    LDA enemies_left
     BEQ L14CD
 
     LDA L0C4F
     CMP L0C51
     BEQ L14CD
 
-    CMP L0C52
+    CMP enemies_left
     BEQ L14CD
 
     DEC L0D4E
@@ -1048,7 +1056,7 @@ ORG $2500
     RTS
 
 .L14CE
-    DEC L0D4F
+    DEC L0D4F   ; Framerate counter ?
     BEQ L14D4
 
     RTS
@@ -1067,7 +1075,7 @@ ORG $2500
     LDA L22B4,X
     BEQ L150A
 
-    JSR L10D1
+    JSR EraseAllEnemies
 
     LDX L0C50
     DEX
@@ -1085,7 +1093,7 @@ ORG $2500
 .L1504
     JSR L1510
 
-    JSR L10D1
+    JSR EraseAllEnemies
 
 .L150A
     DEC L0C50
@@ -1277,7 +1285,7 @@ ORG $2500
     JMP L127C
 
 .L164D
-    DEC L0C4B
+    DEC L0C4B   ; framerate counter ?
     BEQ L1653
 
     RTS
@@ -1462,7 +1470,7 @@ ORG $2500
     LDA L22B4,X
     BEQ L176E
 
-    JSR L10D1
+    JSR EraseAllEnemies
 
     LDX L0C50
     DEX
@@ -1483,7 +1491,7 @@ ORG $2500
     LDA #$00
     STA L22B4,X
 .L176B
-    JSR L10D1
+    JSR EraseAllEnemies
 
 .L176E
     DEC L0C50
@@ -1590,7 +1598,7 @@ ORG $2500
     BNE L180D
 
     LDA #$01
-    STA L0D5B
+    STA game_over_flag
     JMP L1816
 
 .L180D
@@ -1809,7 +1817,10 @@ ORG $2500
 ;-------------------------------------------------------------------------
 ; Display Game Over Text
 ;-------------------------------------------------------------------------
-.L1927
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.DisplayGameOver
     LDX #$00
 .L1929
     LDA L216F,X     ; Game Over address
@@ -1820,8 +1831,12 @@ ORG $2500
     RTS
 
 ;-------------------------------------------------------------------------
-
-.L1935
+; Remove Game Over Text
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.RemoveGameOver
     LDX #$00
 .L1937
     LDA L218D,X
@@ -1834,7 +1849,7 @@ ORG $2500
 ;-------------------------------------------------------------------------
 ; Display PRESS SPACE
 ;-------------------------------------------------------------------------
-.L1943
+.DisplayPressSpace
     LDX #$00
 .L1945
     LDA L21AB,X     ; PRESS SPACE address
@@ -1845,8 +1860,12 @@ ORG $2500
     RTS
 
 ;-------------------------------------------------------------------------
-
-.L1951
+; Remove PRESS SPACE Text
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.RemovePressSpace
     LDX #$00
 .L1953
     LDA L21CC,X
@@ -1867,7 +1886,7 @@ ORG $2500
     LDA L0C70,X
     BEQ L1979
 
-    JSR L10D1
+    JSR EraseAllEnemies
 
     LDX L0C50
     DEX
@@ -1879,32 +1898,28 @@ ORG $2500
 
     RTS
 
-.L197F
+.CheckSpacePressed
     LDX #keyCodeSPACE
     JSR isKeyPressed
 
     CPX #$FF
-    BNE L197F
+    BNE CheckSpacePressed
 
     RTS
 
+;-------------------------------------------------------------------------
+
 .L1989
-    JSR L1943
-
+    JSR DisplayPressSpace
     JSR L18D4
-
-    JSR L197F
-
-    JSR L1935
-
-    JSR L1951
-
+    JSR CheckSpacePressed       ; Wait for SPACE to start game
+    JSR RemoveGameOver
+    JSR RemovePressSpace
     JSR L195F
 
     LDA #$03
     STA lives_left
     JSR UpdateScore
-
     JSR L18D4
 
     LDA #$01
@@ -1915,7 +1930,7 @@ ORG $2500
     STA L0C4E
     STA L0C4F
     STA L0C5D
-    STA L0D5B
+    STA game_over_flag
     LDX #$20
 .L19C1
     STA L22B3,X
@@ -1924,28 +1939,34 @@ ORG $2500
     BNE L19C1
 
     LDA #$20
-    STA L0C52
+    STA enemies_left        ; 32 enemies to destroy
     JSR L1A54
-
     JSR L1A42
-
     JSR PlotLivesLeft
 
     DEC lives_left
     JSR L1838
+    JMP MainGameLoop
 
-    JMP L10F8
-
-.L19E1
-    JSR L1927
-
+;-------------------------------------------------------------------------
+; GameOver
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.GameOver
+    JSR DisplayGameOver
     JSR CheckHighScore
-
     JSR L18D4
-
     JMP L1989
 
-.L19ED
+;-------------------------------------------------------------------------
+; NextWave
+;-------------------------------------------------------------------------
+; On entry  :
+; On exit   : 
+;-------------------------------------------------------------------------
+.NextWave
     JSR L1817
 
     LDA #$32
@@ -1974,7 +1995,7 @@ ORG $2500
     INC L0D5C
 .L1A17
     LDA #$20
-    STA L0C52
+    STA enemies_left        ; 32 enemies to destroy
     JSR L1A54
 
     JSR L1A42
@@ -1997,7 +2018,7 @@ ORG $2500
 
     INC L0C51
 .L1A3F
-    JMP L10F8
+    JMP MainGameLoop
 
 .L1A42
     LDA L2F14
@@ -2053,7 +2074,7 @@ ORG $2500
     STA L0D20,X
     LDA #$02
     STA L22B4,X
-    JSR L10D1
+    JSR EraseAllEnemies
 
     LDA L2F17
     STA L0D5F
